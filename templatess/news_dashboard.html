@@ -1,0 +1,491 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Guardian Live</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --text-color: #333;
+            --background-color: #f8f9fa;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 2rem 0;
+            background: var(--primary-color);
+            color: white;
+            border-radius: var(--border-radius);
+        }
+
+        .live-badge {
+            height: 1.2em;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+
+        .last-updated {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 0.5rem;
+        }
+
+        .search-header {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 20px;
+        }
+
+        .search-form {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 50px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .article-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .article-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .article-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-bottom: 3px solid var(--secondary-color);
+        }
+
+        .card-content {
+            padding: 1.5rem;
+            flex-grow: 1;
+        }
+
+        .article-card h2 {
+            font-size: 1.25rem;
+            margin: 0 0 1rem 0;
+            color: var(--primary-color);
+            line-height: 1.4;
+        }
+
+        .meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .category {
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--secondary-color);
+            letter-spacing: 0.5px;
+        }
+
+        .verification-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin: 1rem 0;
+            display: inline-block;
+        }
+
+        .gemini-badge {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .basic-badge {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .view-button {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--secondary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.85rem;
+        }
+
+        .view-button:hover {
+            background-color: #2980b9;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .expiry-info {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: #95a5a6;
+            text-align: right;
+        }
+
+        .results-count {
+            text-align: center;
+            margin: 2rem 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .empty-state h2 {
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .empty-state ul {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+            display: inline-block;
+            margin: 1rem 0;
+        }
+
+        .empty-state li {
+            padding: 0.5rem 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>
+            <img src="{% static 'live-dot.gif' %}" alt="Live" class="live-badge">
+            News Guardian Live
+        </h1>
+        <div class="last-updated">
+            Last updated: {{ current_time|date:"DATETIME_FORMAT" }}
+        </div>
+    </header>
+
+    <div class="search-header">
+        <form class="search-form" method="GET" action="{% url 'core:news-dashboard' %}">
+            <input type="text" 
+                   name="q" 
+                   class="search-input" 
+                   placeholder="Search news by title or category..."
+                   value="{{ search_query }}">
+        </form>
+        <!-- Add this section below the search header -->
+<div class="verification-section">
+    <h2>Verify News Authenticity</h2>
+    <div class="verification-box">
+        <input type="text" 
+               id="news-input" 
+               placeholder="Enter news URL or full title..."
+               class="verification-input">
+        <button onclick="verifyNews()" class="verify-button">
+            Verify Authenticity
+        </button>
+        <div id="verification-result" class="result-container"></div>
+    </div>
+</div>
+
+<style>
+    /* Add these new styles */
+    .verification-section {
+        max-width: 800px;
+        margin: 3rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+    }
+
+    .verification-box {
+        position: relative;
+        margin-top: 1.5rem;
+    }
+
+    .verification-input {
+        width: 100%;
+        padding: 1.2rem;
+        border: 2px solid #e0e0e0;
+        border-radius: var(--border-radius);
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .verify-button {
+        width: 100%;
+        padding: 1.2rem;
+        background-color: var(--secondary-color);
+        color: white;
+        border: none;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: background-color 0.3s ease;
+    }
+
+    .verify-button:hover {
+        background-color: #2980b9;
+    }
+
+    .result-container {
+        margin-top: 2rem;
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        display: none;
+    }
+
+    .result-container.genuine {
+        background: #e8f5e9;
+        border: 2px solid #2e7d32;
+        color: #2e7d32;
+    }
+
+    .result-container.fake {
+        background: #ffebee;
+        border: 2px solid #c62828;
+        color: #c62828;
+    }
+
+    .result-container.loading {
+        background: #fff3e0;
+        border: 2px solid #ef6c00;
+        color: #ef6c00;
+    }
+
+    .verification-details {
+        margin-top: 1rem;
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
+
+    .confidence-meter {
+        height: 8px;
+        background: #ddd;
+        border-radius: 4px;
+        margin: 1rem 0;
+        overflow: hidden;
+    }
+
+    .confidence-fill {
+        height: 100%;
+        background: var(--secondary-color);
+        width: 0;
+        transition: width 0.5s ease;
+    }
+</style>
+
+<script>
+    // Frontend verification handler
+async function verifyNews() {
+    const input = document.getElementById('news-input').value;
+    const resultContainer = document.getElementById('verification-result');
+    
+    // Clear previous results
+    resultContainer.innerHTML = '';
+    resultContainer.style.display = 'none';
+
+    if (!input.trim()) {
+        showError('Please enter news content to verify');
+        return;
+    }
+
+    showLoading();
+
+    try {
+        const response = await fetch('/api/verify-news/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ input: input })
+        });
+
+        const data = await handleResponse(response);
+        showResult(data);
+
+    } catch (error) {
+        showError(error.message);
+    }
+}
+
+async function handleResponse(response) {
+    const contentType = response.headers.get('content-type');
+    
+    if (!response.ok) {
+        const error = contentType?.includes('application/json') 
+            ? (await response.json()).error
+            : await response.text();
+        throw new Error(error || `HTTP error! status: ${response.status}`);
+    }
+
+    if (!contentType?.includes('application/json')) {
+        throw new Error('Received non-JSON response');
+    }
+
+    return response.json();
+}
+
+function showLoading() {
+    const resultContainer = document.getElementById('verification-result');
+    resultContainer.className = 'result-container loading';
+    resultContainer.innerHTML = `
+        <div class="loading-message">
+            <div class="spinner"></div>
+            Analyzing news authenticity...
+        </div>
+    `;
+    resultContainer.style.display = 'block';
+}
+
+function showResult(data) {
+    const resultContainer = document.getElementById('verification-result');
+    
+    if (data.error) {
+        throw new Error(data.error);
+    }
+
+    resultContainer.className = `result-container ${data.verdict.toLowerCase()}`;
+    resultContainer.innerHTML = `
+        <h3>Verification Result: ${data.verdict}</h3>
+        <div class="confidence-meter">
+            <div class="confidence-fill" style="width: ${data.confidence}%"></div>
+        </div>
+        <div class="confidence">Confidence Level: ${data.confidence}%</div>
+        <div class="details">${data.details}</div>
+        ${data.sources ? `
+            <div class="sources">
+                <h4>References:</h4>
+                <ul>${data.sources.map(s => `<li>${s}</li>`).join('')}</ul>
+            </div>
+        ` : ''}
+    `;
+}
+
+function showError(message) {
+    const resultContainer = document.getElementById('verification-result');
+    resultContainer.className = 'result-container error';
+    resultContainer.innerHTML = `
+        <h3>Verification Failed</h3>
+        <div class="error-message">${message}</div>
+    `;
+    resultContainer.style.display = 'block';
+}
+</script>
+    </div>
+
+    {% if articles %}
+    <div class="results-count">
+        Showing {{ articles|length }} results {% if search_query %}for "{{ search_query }}"{% endif %}
+    </div>
+
+    <div class="news-grid">
+        {% for article in articles %}
+        <div class="article-card">
+            {% if article.img_url %}
+            <img src="{{ article.img_url }}" alt="{{ article.title }}" class="article-image">
+            {% endif %}
+            
+            <div class="card-content">
+                <h2>{{ article.title }}</h2>
+                
+                <div class="meta">
+                    <span class="category">{{ article.news_category }}</span>
+                    <time>{{ article.publication_date|date:"M d, Y H:i" }}</time>
+                </div>
+
+                <div class="verification-badge {% if article.verification_method == 'gemini' %}gemini-badge{% else %}basic-badge{% endif %}">
+                    {% if article.verification_method == 'gemini' %}
+                        ✅ Gemini Verified ({{ article.verification_details.confidence|default:"medium"|title }})
+                    {% else %}
+                        ⚠️ Basic Verification
+                    {% endif %}
+                </div>
+
+                <a href="{{ article.web_url }}" 
+                   class="view-button" 
+                   target="_blank" 
+                   rel="noopener noreferrer">
+                    View Full Article
+                </a>
+
+                <div class="expiry-info">
+                    Expires in {{ article.expires_at|timeuntil }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h2>No News Found{% if search_query %} for "{{ search_query }}"{% endif %}</h2>
+        <p>Try these suggestions:</p>
+        <ul>
+            <li>✓ Check your search terms</li>
+            <li>✓ Try different keywords</li>
+            <li>✓ Browse all categories</li>
+        </ul>
+    </div>
+    {% endif %}
+</body>
+</html>
